@@ -251,7 +251,7 @@ function renderSpeaking() {
 function renderRoundDone() {
   const { round } = state.session;
   el('roundDoneTitle').textContent = `라운드 ${round} 종료`;
-  el('startNextRound').textContent = `라운드 ${round + 1} 시작`;
+  el('startNextRound').textContent = `라운드 ${round + 1} 배정 뽑기`;
 }
 
 function renderFinished() {
@@ -323,6 +323,17 @@ function endRound() {
 }
 
 function startNextRound() {
+  state.session.round += 1;
+  if (!drawCurrentRound()) {
+    state.session.round -= 1;
+    return;
+  }
+  state.session.phase = 'assigned';
+  save();
+  render();
+}
+
+function startNextRoundWithReading() {
   state.session.round += 1;
   startReading();
 }
@@ -467,6 +478,7 @@ function bindFlow() {
   bindAdjust('speaker');
 
   el('startNextRound').addEventListener('click', startNextRound);
+  el('startNextRoundWithReading').addEventListener('click', startNextRoundWithReading);
   el('restart').addEventListener('click', resetSession);
 
   el('resetBtn').addEventListener('click', () => {

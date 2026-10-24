@@ -144,8 +144,11 @@
     <section id="screen-roundDone" class="screen" hidden>
       <div class="card center">
         <h2 id="roundDoneTitle">라운드 1 종료</h2>
-        <p class="muted">다음 라운드도 읽기부터 시작합니다. 배정은 앞 라운드에서 받은 문제를 피해서 뽑습니다.</p>
-        <button id="startNextRound" class="btn primary large" type="button">라운드 2 시작</button>
+        <p class="muted">다음 라운드는 읽기 시간 없이 바로 배정을 뽑습니다. 앞 라운드에서 받은 문제는 피해서 뽑습니다.</p>
+        <div class="controls">
+          <button id="startNextRoundWithReading" class="btn ghost" type="button">읽기부터 시작</button>
+          <button id="startNextRound" class="btn primary large" type="button">라운드 2 배정 뽑기</button>
+        </div>
       </div>
     </section>
 
