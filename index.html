@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#14161b">
+  <meta name="description" content="참가자에게 제시문을 배정하고 읽기와 발표 라운드를 타이머로 진행합니다.">
+  <title>라운드 타이머</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">라운드 타이머</h1>
+    <div class="topbar-right">
+      <span id="roundBadge" class="badge" hidden></span>
+      <button id="resetBtn" class="btn ghost small" type="button" hidden>처음부터</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="screen-setup" class="screen" hidden>
+      <div class="card">
+        <h2>참가자와 제시문</h2>
+        <p class="muted">행 순서가 제시문 번호입니다. 제시문 k번을 받은 사람이 k번째로 발표합니다.</p>
+        <table class="table">
+          <thead>
+            <tr><th>#</th><th>이름</th><th>제시문 제목</th><th></th></tr>
+          </thead>
+          <tbody id="participantRows"></tbody>
+        </table>
+        <div class="table-foot">
+          <button id="addParticipant" class="btn" type="button">+ 참가자 추가</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>시간과 규칙</h2>
+        <div class="grid3">
+          <label>읽기 시간 (분)<input type="number" id="readMin" min="0.1" step="0.5" inputmode="decimal"></label>
+          <label>발표자 1인당 시간 (분)<input type="number" id="perPersonMin" min="0.1" step="0.5" inputmode="decimal"></label>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="excludeOwn">
+          <span>본인이 준비한 제시문은 본인에게 배정하지 않기</span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <p id="setupHint" class="hint"></p>
+        <button id="assignBtn" class="btn primary large" type="button">라운드 1 배정</button>
+      </div>
+    </section>
+
+    <section id="screen-assigned" class="screen" hidden>
+      <div class="card">
+        <h2 id="assignedTitle">라운드 1 배정</h2>
+        <table class="table">
+          <thead>
+            <tr><th>순서</th><th>발표자</th><th>제시문</th><th>작성자</th></tr>
+          </thead>
+          <tbody id="assignedRows"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="backToSetup" class="btn ghost" type="button">설정으로</button>
+        <button id="reshuffle" class="btn" type="button">다시 섞기</button>
+        <button id="startReading" class="btn primary large" type="button">읽기 시작 (<span id="readLenLabel"></span>)</button>
+      </div>
+    </section>
+
+    <section id="screen-reading" class="screen" hidden>
+      <div class="timer-block">
+        <p class="phase-label">읽기</p>
+        <div id="readingClock" class="clock">00:00</div>
+        <div class="controls">
+          <button id="readingPause" class="btn" type="button">일시정지</button>
+          <button id="readingPlus" class="btn" type="button">+1분</button>
+          <button id="readingStopAlarm" class="btn ghost" type="button" hidden>알람 끄기</button>
+          <button id="toSpeaking" class="btn primary large" type="button">발표로 넘어가기</button>
+        </div>
+      </div>
+      <div class="card">
+        <table class="table">
+          <thead>
+            <tr><th>순서</th><th>발표자</th><th>제시문</th><th>작성자</th></tr>
+          </thead>
+          <tbody id="readingRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="screen-speaking" class="screen" hidden>
+      <div class="timer-block">
+        <p id="speakingLabel" class="phase-label">발표</p>
+        <div id="speakingClock" class="clock">00:00</div>
+        <p id="speakerName" class="speaker-name"></p>
+        <p id="speakerPaper" class="speaker-paper"></p>
+        <div class="controls">
+          <button id="speakerStart" class="btn primary large" type="button">발표 시작</button>
+          <button id="speakerPause" class="btn" type="button" hidden>일시정지</button>
+          <button id="speakerPlus" class="btn" type="button" hidden>+1분</button>
+          <button id="speakingStopAlarm" class="btn ghost" type="button" hidden>알람 끄기</button>
+          <button id="speakerNext" class="btn" type="button">다음 발표자</button>
+          <button id="endRound" class="btn ghost" type="button">라운드 종료</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>발표 순서</h2>
+        <p class="muted">행을 누르면 그 발표자로 바로 이동합니다.</p>
+        <table class="table clickable">
+          <thead>
+            <tr><th>순서</th><th>발표자</th><th>제시문</th><th>작성자</th></tr>
+          </thead>
+          <tbody id="speakingRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="screen-roundDone" class="screen" hidden>
+      <div class="card center">
+        <h2 id="roundDoneTitle">라운드 1 종료</h2>
+        <p class="muted">다음 라운드는 앞 라운드에서 받은 제시문을 다시 받지 않도록 배정합니다.</p>
+        <button id="assignNext" class="btn primary large" type="button">라운드 2 배정</button>
+      </div>
+    </section>
+
+    <section id="screen-finished" class="screen" hidden>
+      <div class="card">
+        <h2>모든 라운드 종료</h2>
+        <table class="table">
+          <thead>
+            <tr><th>참가자</th><th>라운드 1</th><th>라운드 2</th></tr>
+          </thead>
+          <tbody id="summaryRows"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="restart" class="btn primary large" type="button">처음부터</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
