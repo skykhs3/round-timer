@@ -225,7 +225,7 @@ function renderAssigned() {
   const { round } = state.session;
   el('assignedTitle').textContent = `라운드 ${round} 배정`;
   el('assignedIntro').textContent = state.settings.orderByPaper
-    ? '문제를 무작위로 뽑았습니다. 문제 N번을 받은 사람이 N번째로 발표합니다. 발표로 넘어가기 전에 전체를 확인하세요.'
+    ? '문제를 무작위로 뽑았습니다. 발표할 문제의 번호가 발표 순서입니다(문제 N번을 발표하는 사람이 N번째). 발표로 넘어가기 전에 전체를 확인하세요.'
     : '문제와 발표 순서를 무작위로 뽑았습니다. 발표로 넘어가기 전에 전체를 확인하세요.';
   el('assignedRows').innerHTML = orderRows(currentOrder(), currentAssignment());
 }
