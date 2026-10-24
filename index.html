@@ -23,7 +23,7 @@
     <section id="screen-setup" class="screen" hidden>
       <div class="card">
         <h2>참가자와 제시문</h2>
-        <p class="muted">행 순서가 제시문 번호입니다. 제시문 k번을 받은 사람이 k번째로 발표합니다.</p>
+        <p class="muted">행 순서가 문제 번호입니다. 발표 순서는 읽기가 끝난 뒤 따로 뽑습니다.</p>
         <table class="table">
           <thead>
             <tr><th>#</th><th>이름</th><th>제시문 제목</th><th></th></tr>
@@ -56,9 +56,10 @@
     <section id="screen-assigned" class="screen" hidden>
       <div class="card">
         <h2 id="assignedTitle">라운드 1 배정</h2>
+        <p class="muted">발표 순서는 읽기가 끝난 뒤 뽑습니다.</p>
         <table class="table">
           <thead>
-            <tr><th>순서</th><th>발표자</th><th>제시문</th><th>작성자</th></tr>
+            <tr><th>#</th><th>참가자</th><th>받은 제시문</th><th>작성자</th></tr>
           </thead>
           <tbody id="assignedRows"></tbody>
         </table>
@@ -76,18 +77,40 @@
         <div id="readingClock" class="clock">00:00</div>
         <div class="controls">
           <button id="readingPause" class="btn" type="button">일시정지</button>
-          <button id="readingPlus" class="btn" type="button">+1분</button>
+          <button id="readingAdjustToggle" class="btn" type="button">남은 시간 변경</button>
           <button id="readingStopAlarm" class="btn ghost" type="button" hidden>알람 끄기</button>
-          <button id="toSpeaking" class="btn primary large" type="button">발표로 넘어가기</button>
+          <button id="toOrdered" class="btn primary large" type="button">발표 순서 뽑기</button>
         </div>
+        <form id="readingAdjust" class="adjust" hidden>
+          <label>남은 시간 <input type="text" id="readingAdjustInput" inputmode="decimal" placeholder="예: 3, 1.5, 3:30" autocomplete="off"></label>
+          <button class="btn primary" type="submit">적용</button>
+          <button class="btn ghost" type="button" data-cancel>취소</button>
+        </form>
       </div>
       <div class="card">
         <table class="table">
           <thead>
-            <tr><th>순서</th><th>발표자</th><th>제시문</th><th>작성자</th></tr>
+            <tr><th>#</th><th>참가자</th><th>받은 제시문</th><th>작성자</th></tr>
           </thead>
           <tbody id="readingRows"></tbody>
         </table>
+      </div>
+    </section>
+
+    <section id="screen-ordered" class="screen" hidden>
+      <div class="card">
+        <h2 id="orderedTitle">라운드 1 발표 순서</h2>
+        <p class="muted">순서는 무작위로 뽑았습니다. 발표로 넘어가기 전에 전체 순서를 확인하세요.</p>
+        <table class="table">
+          <thead>
+            <tr><th>순서</th><th>발표자</th><th>제시문</th><th>작성자</th></tr>
+          </thead>
+          <tbody id="orderedRows"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="redrawOrder" class="btn" type="button">다시 뽑기</button>
+        <button id="toSpeaking" class="btn primary large" type="button">발표로 넘어가기</button>
       </div>
     </section>
 
@@ -100,11 +123,16 @@
         <div class="controls">
           <button id="speakerStart" class="btn primary large" type="button">발표 시작</button>
           <button id="speakerPause" class="btn" type="button" hidden>일시정지</button>
-          <button id="speakerPlus" class="btn" type="button" hidden>+1분</button>
+          <button id="speakerAdjustToggle" class="btn" type="button">남은 시간 변경</button>
           <button id="speakingStopAlarm" class="btn ghost" type="button" hidden>알람 끄기</button>
           <button id="speakerNext" class="btn" type="button">다음 발표자</button>
           <button id="endRound" class="btn ghost" type="button">라운드 종료</button>
         </div>
+        <form id="speakerAdjust" class="adjust" hidden>
+          <label>남은 시간 <input type="text" id="speakerAdjustInput" inputmode="decimal" placeholder="예: 3, 1.5, 3:30" autocomplete="off"></label>
+          <button class="btn primary" type="submit">적용</button>
+          <button class="btn ghost" type="button" data-cancel>취소</button>
+        </form>
       </div>
       <div class="card">
         <h2>발표 순서</h2>

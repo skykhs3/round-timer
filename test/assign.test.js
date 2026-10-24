@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assignRound, isValidAssignment, minParticipants, speakingOrder } from '../src/assign.js';
+import { assignRound, drawOrder, isValidAssignment, minParticipants } from '../src/assign.js';
 
 function isPermutation(perm, n) {
   return perm.length === n
@@ -68,11 +68,14 @@ test('최소 인원: 본인 제외 켬 3명, 끔 2명', () => {
   assert.equal(minParticipants({ excludeOwn: false }), 2);
 });
 
-test('speakingOrder는 배정의 역순열이다', () => {
-  const a = [2, 0, 3, 1];
-  const order = speakingOrder(a);
-  assert.deepEqual(order, [1, 3, 0, 2]);
-  for (let k = 0; k < a.length; k++) assert.equal(a[order[k]], k);
+test('drawOrder는 참가자 전원의 순열이고 매번 섞인다', () => {
+  const seen = new Set();
+  for (let i = 0; i < 300; i++) {
+    const order = drawOrder(5);
+    assert.ok(isPermutation(order, 5));
+    seen.add(order.join(','));
+  }
+  assert.ok(seen.size > 1);
 });
 
 test('폴백: 순환 이동으로 풀리지 않는 이전 라운드도 backtracking으로 처리한다', () => {

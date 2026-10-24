@@ -34,6 +34,28 @@ export function addTime(timer, deltaMs, now = Date.now()) {
   return { ...timer, endAt: Math.max(timer.endAt, now) + deltaMs };
 }
 
+export function setRemaining(timer, ms, now = Date.now()) {
+  const remaining = Math.max(0, ms);
+  if (timer && isPaused(timer)) return { endAt: null, pausedRemainingMs: remaining };
+  return { endAt: now + remaining, pausedRemainingMs: null };
+}
+
+// "3" / "1.5" 는 분, "3:30" 은 분:초. 해석할 수 없으면 null.
+export function parseDuration(text) {
+  const t = String(text).trim().replace(/\s+/g, '');
+  if (!t) return null;
+  const clock = t.match(/^(\d+):(\d{1,2})$/);
+  if (clock) {
+    const m = Number(clock[1]);
+    const s = Number(clock[2]);
+    if (s >= 60) return null;
+    return (m * 60 + s) * 1000;
+  }
+  if (!/^\d*\.?\d+$/.test(t)) return null;
+  const minutes = Number(t);
+  return minutes > 0 ? Math.round(minutes * 60 * 1000) : null;
+}
+
 export function minutesToMs(minutes) {
   return Math.round(Number(minutes) * 60 * 1000);
 }

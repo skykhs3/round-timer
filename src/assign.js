@@ -69,11 +69,7 @@ export function assignRound(n, previousRounds = [], options = {}) {
   return backtrack(n, forbiddenSets(n, previousRounds, excludeOwn), rng);
 }
 
-// order[k] = 제시문 k를 받은 참가자. 제시문 번호 순으로 발표한다.
-export function speakingOrder(assignment) {
-  const order = new Array(assignment.length);
-  assignment.forEach((paper, person) => {
-    order[paper] = person;
-  });
-  return order;
+// order[k] = k번째로 발표하는 참가자. 읽기가 끝난 뒤 무작위로 뽑는다.
+export function drawOrder(n, rng = Math.random) {
+  return shuffle(range(n), rng);
 }

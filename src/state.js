@@ -21,6 +21,7 @@ export function emptySession() {
     round: 1,
     phase: 'setup',
     assignments: [],
+    orders: [],
     timer: null,
     speakerIdx: 0,
     speakerTimer: null,
@@ -44,10 +45,14 @@ export function load() {
     const participants = Array.isArray(parsed.participants) && parsed.participants.length
       ? parsed.participants.map((p) => ({ ...newParticipant(), ...p }))
       : base.participants;
+    const session = { ...emptySession(), ...(parsed.session || {}) };
+    if (!Array.isArray(session.orders)) session.orders = [];
+    const needsOrder = session.phase === 'ordered' || session.phase === 'speaking';
+    if (needsOrder && !Array.isArray(session.orders[session.round - 1])) Object.assign(session, emptySession());
     return {
       participants,
       settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
-      session: { ...emptySession(), ...(parsed.session || {}) },
+      session,
     };
   } catch {
     return initialState();
