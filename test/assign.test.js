@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assignRound, drawOrder, isValidAssignment, minParticipants } from '../src/assign.js';
+import { assignRound, drawOrder, isValidAssignment, minParticipants, orderByPaperNumber } from '../src/assign.js';
 
 function isPermutation(perm, n) {
   return perm.length === n
@@ -84,4 +84,11 @@ test('폴백: 순환 이동으로 풀리지 않는 이전 라운드도 backtrack
     const r2 = assignRound(4, [prev], { excludeOwn: true, maxTries: 0 });
     assert.ok(r2 && isValidAssignment(r2, [prev], { excludeOwn: true }));
   }
+});
+
+test('orderByPaperNumber: 문제 k를 받은 사람이 k번째로 발표한다', () => {
+  const a = [2, 0, 3, 1];
+  const order = orderByPaperNumber(a);
+  assert.deepEqual(order, [1, 3, 0, 2]);
+  for (let k = 0; k < a.length; k++) assert.equal(a[order[k]], k);
 });

@@ -1,9 +1,8 @@
-import { assignRound, drawOrder, minParticipants } from './assign.js';
+import { assignRound, drawOrder, minParticipants, orderByPaperNumber } from './assign.js';
 import * as State from './state.js';
 import * as Timer from './timer.js';
 import * as Alarm from './alarm.js';
 
-const SCREENS = ['setup', 'assigned', 'reading', 'ordered', 'speaking', 'roundDone', 'finished'];
 const RESET_ARM_MS = 3000;
 
 let state = State.load();
@@ -93,6 +92,8 @@ function renderParticipantRows() {
 function syncSettingsInputs() {
   const t = State.effectiveTimes(state);
   el('excludeOwn').checked = state.settings.excludeOwn;
+  el('orderByPaper').checked = state.settings.orderByPaper;
+  el('hideSpeakerTimer').checked = state.settings.hideSpeakerTimer;
   el('readMin').value = t.readMin;
   el('perPersonMin').value = t.perPersonMin;
 }
@@ -102,7 +103,7 @@ function updateSetupDerived() {
   const t = State.effectiveTimes(state);
   el('setupHint').textContent = problem
     || `${state.participants.length}명 · 읽기 ${fmtMin(t.readMin)} · 발표자 1인당 ${fmtMin(t.perPersonMin)}`;
-  el('assignBtn').disabled = Boolean(problem);
+  el('startRound').disabled = Boolean(problem);
 }
 
 function renderSetup() {
@@ -153,6 +154,16 @@ function bindSetup() {
     updateSetupDerived();
   });
 
+  el('orderByPaper').addEventListener('change', (e) => {
+    state.settings.orderByPaper = e.target.checked;
+    save();
+  });
+
+  el('hideSpeakerTimer').addEventListener('change', (e) => {
+    state.settings.hideSpeakerTimer = e.target.checked;
+    save();
+  });
+
   for (const key of ['readMin', 'perPersonMin']) {
     el(key).addEventListener('input', (e) => {
       const v = Number(e.target.value);
@@ -163,43 +174,42 @@ function bindSetup() {
     el(key).addEventListener('change', () => syncSettingsInputs());
   }
 
-  el('assignBtn').addEventListener('click', () => {
+  el('startRound').addEventListener('click', () => {
     if (setupProblem()) return;
-    assignCurrentRound();
+    startReading();
   });
 }
 
-/* ---------- 배정과 순서 ---------- */
+/* ---------- 배정 뽑기 ---------- */
 
-function assignCurrentRound() {
+function drawCurrentRound() {
   const round = state.session.round;
-  const previous = state.session.assignments.slice(0, round - 1);
-  const perm = assignRound(state.participants.length, previous, { excludeOwn: state.settings.excludeOwn });
-  if (!perm) {
-    el('setupHint').textContent = '조건을 만족하는 배정을 찾지 못했습니다. 인원과 규칙을 확인하세요.';
-    return;
-  }
-  state.session.assignments = [...previous, perm];
-  state.session.orders = state.session.orders.slice(0, round - 1);
-  state.session.phase = 'assigned';
-  save();
-  render();
+  const n = state.participants.length;
+  const prevAssignments = state.session.assignments.slice(0, round - 1);
+  const prevOrders = state.session.orders.slice(0, round - 1);
+  const perm = assignRound(n, prevAssignments, { excludeOwn: state.settings.excludeOwn });
+  if (!perm) return false;
+  const order = state.settings.orderByPaper ? orderByPaperNumber(perm) : drawOrder(n);
+  state.session.assignments = [...prevAssignments, perm];
+  state.session.orders = [...prevOrders, order];
+  return true;
 }
 
-function drawCurrentOrder() {
-  const round = state.session.round;
-  const previous = state.session.orders.slice(0, round - 1);
-  state.session.orders = [...previous, drawOrder(state.participants.length)];
-  state.session.phase = 'ordered';
-  save();
-  render();
+function paperRows() {
+  return state.participants.map((_, i) => `<tr>
+      <td class="num">${i + 1}</td>
+      <td class="strong">${esc(paperLabel(i))}</td>
+      <td class="muted">${esc(personName(i))}</td>
+    </tr>`).join('');
 }
 
-function assignmentRows(assignment) {
-  return assignment.map((paper, person) => {
+function orderRows(order, assignment, { current = -1, markDone = false } = {}) {
+  return order.map((person, k) => {
+    const paper = assignment[person];
     const own = paper === person;
-    return `<tr>
-      <td class="num">${person + 1}</td>
+    const cls = k === current ? 'current' : (markDone && k < current ? 'done' : '');
+    return `<tr class="${cls}" data-k="${k}">
+      <td class="num">${k + 1}</td>
       <td class="strong">${esc(personName(person))}</td>
       <td>${esc(paperLabel(paper))}${own ? '<span class="tag">본인</span>' : ''}</td>
       <td class="muted">${esc(personName(paper))}</td>
@@ -207,35 +217,17 @@ function assignmentRows(assignment) {
   }).join('');
 }
 
-function orderRows(order, assignment, { current = -1, markDone = false } = {}) {
-  return order.map((person, k) => {
-    const paper = assignment[person];
-    const cls = k === current ? 'current' : (markDone && k < current ? 'done' : '');
-    return `<tr class="${cls}" data-k="${k}">
-      <td class="num">${k + 1}</td>
-      <td class="strong">${esc(personName(person))}</td>
-      <td>${esc(paperLabel(paper))}</td>
-      <td class="muted">${esc(personName(paper))}</td>
-    </tr>`;
-  }).join('');
+function renderReading() {
+  el('paperRows').innerHTML = paperRows();
 }
 
 function renderAssigned() {
   const { round } = state.session;
   el('assignedTitle').textContent = `라운드 ${round} 배정`;
-  el('assignedRows').innerHTML = assignmentRows(currentAssignment());
-  el('backToSetup').hidden = round !== 1;
-  el('readLenLabel').textContent = fmtMin(State.effectiveTimes(state).readMin);
-}
-
-function renderReading() {
-  el('readingRows').innerHTML = assignmentRows(currentAssignment());
-}
-
-function renderOrdered() {
-  const { round } = state.session;
-  el('orderedTitle').textContent = `라운드 ${round} 발표 순서`;
-  el('orderedRows').innerHTML = orderRows(currentOrder(), currentAssignment());
+  el('assignedIntro').textContent = state.settings.orderByPaper
+    ? '문제를 무작위로 뽑았습니다. 문제 N번을 받은 사람이 N번째로 발표합니다. 발표로 넘어가기 전에 전체를 확인하세요.'
+    : '문제와 발표 순서를 무작위로 뽑았습니다. 발표로 넘어가기 전에 전체를 확인하세요.';
+  el('assignedRows').innerHTML = orderRows(currentOrder(), currentAssignment());
 }
 
 function renderSpeaking() {
@@ -244,17 +236,22 @@ function renderSpeaking() {
   const idx = currentSpeakerIdx();
   const person = order[idx];
   const paper = assignment[person];
+  const hidden = state.settings.hideSpeakerTimer;
   el('speakingLabel').textContent = `발표 · ${idx + 1}번째`;
   el('speakerName').textContent = personName(person);
   el('speakerPaper').textContent = `${paperLabel(paper)} · 작성자 ${personName(paper)}`;
   el('speakingRows').innerHTML = orderRows(order, assignment, { current: idx, markDone: true });
   el('speakerNext').disabled = idx >= order.length - 1;
+  el('screen-speaking').classList.toggle('timer-hidden', hidden);
+  el('speakerTimerBlock').hidden = hidden;
+  el('speakerAdjustToggle').hidden = hidden;
+  el('speakerTimerToggle').textContent = hidden ? '타이머 보이기' : '타이머 숨기기';
 }
 
 function renderRoundDone() {
   const { round } = state.session;
   el('roundDoneTitle').textContent = `라운드 ${round} 종료`;
-  el('assignNext').textContent = `라운드 ${round + 1} 배정`;
+  el('startNextRound').textContent = `라운드 ${round + 1} 시작`;
 }
 
 function renderFinished() {
@@ -284,10 +281,19 @@ function startReading() {
 }
 
 function finishReading() {
+  if (!drawCurrentRound()) return;
   Alarm.stopAlarm();
   hideAdjust('reading');
   state.session.timer = null;
-  drawCurrentOrder();
+  state.session.phase = 'assigned';
+  save();
+  render();
+}
+
+function redraw() {
+  if (!drawCurrentRound()) return;
+  save();
+  render();
 }
 
 function enterSpeaking() {
@@ -314,6 +320,11 @@ function endRound() {
   }
   save();
   render();
+}
+
+function startNextRound() {
+  state.session.round += 1;
+  startReading();
 }
 
 function resetSession() {
@@ -349,6 +360,19 @@ function toggleSpeakerPause() {
   tick();
 }
 
+function toggleSpeakerTimerVisibility() {
+  const hide = !state.settings.hideSpeakerTimer;
+  state.settings.hideSpeakerTimer = hide;
+  if (hide) {
+    Alarm.stopAlarm();
+    hideAdjust('speaker');
+    state.session.speakerTimer = null;
+  }
+  save();
+  render();
+  tick();
+}
+
 function selectSpeaker(k) {
   Alarm.stopAlarm();
   hideAdjust('speaker');
@@ -375,7 +399,8 @@ function showAdjust(kind) {
   const form = el(`${kind}Adjust`);
   const input = el(`${kind}AdjustInput`);
   const timer = state.session[timerKeyOf(kind)];
-  const fallbackMin = kind === 'reading' ? State.effectiveTimes(state).readMin : State.effectiveTimes(state).perPersonMin;
+  const times = State.effectiveTimes(state);
+  const fallbackMin = kind === 'reading' ? times.readMin : times.perPersonMin;
   const ms = timer ? Timer.remainingMs(timer) : Timer.minutesToMs(fallbackMin);
   form.hidden = false;
   form.classList.remove('invalid');
@@ -420,19 +445,11 @@ function bindAdjust(kind) {
 }
 
 function bindFlow() {
-  el('backToSetup').addEventListener('click', () => {
-    state.session = State.emptySession();
-    save();
-    render();
-  });
-  el('reshuffle').addEventListener('click', assignCurrentRound);
-  el('startReading').addEventListener('click', startReading);
-
   el('readingPause').addEventListener('click', toggleReadingPause);
   el('readingStopAlarm').addEventListener('click', () => { Alarm.stopAlarm(); tick(); });
-  el('toOrdered').addEventListener('click', finishReading);
+  el('drawBtn').addEventListener('click', finishReading);
 
-  el('redrawOrder').addEventListener('click', drawCurrentOrder);
+  el('redraw').addEventListener('click', redraw);
   el('toSpeaking').addEventListener('click', enterSpeaking);
 
   el('speakerStart').addEventListener('click', startSpeakerTimer);
@@ -440,6 +457,7 @@ function bindFlow() {
   el('speakingStopAlarm').addEventListener('click', () => { Alarm.stopAlarm(); tick(); });
   el('speakerNext').addEventListener('click', nextSpeaker);
   el('endRound').addEventListener('click', endRound);
+  el('speakerTimerToggle').addEventListener('click', toggleSpeakerTimerVisibility);
   el('speakingRows').addEventListener('click', (e) => {
     const tr = e.target.closest('tr[data-k]');
     if (tr) selectSpeaker(Number(tr.dataset.k));
@@ -448,10 +466,7 @@ function bindFlow() {
   bindAdjust('reading');
   bindAdjust('speaker');
 
-  el('assignNext').addEventListener('click', () => {
-    state.session.round += 1;
-    assignCurrentRound();
-  });
+  el('startNextRound').addEventListener('click', startNextRound);
   el('restart').addEventListener('click', resetSession);
 
   el('resetBtn').addEventListener('click', () => {
@@ -480,14 +495,13 @@ function bindFlow() {
 
 function render() {
   const { phase, round } = state.session;
-  for (const s of SCREENS) el(`screen-${s}`).hidden = s !== phase;
+  for (const s of State.PHASES) el(`screen-${s}`).hidden = s !== phase;
   el('roundBadge').hidden = phase === 'setup';
   el('roundBadge').textContent = `라운드 ${round} / ${State.ROUNDS}`;
   el('resetBtn').hidden = phase === 'setup';
   if (phase === 'setup') renderSetup();
-  if (phase === 'assigned') renderAssigned();
   if (phase === 'reading') renderReading();
-  if (phase === 'ordered') renderOrdered();
+  if (phase === 'assigned') renderAssigned();
   if (phase === 'speaking') renderSpeaking();
   if (phase === 'roundDone') renderRoundDone();
   if (phase === 'finished') renderFinished();
@@ -500,7 +514,7 @@ function updateTitle() {
     document.title = `${Timer.formatMs(Timer.remainingMs(timer))} 읽기 · 라운드 타이머`;
     return;
   }
-  if (phase === 'speaking' && speakerTimer) {
+  if (phase === 'speaking' && speakerTimer && !state.settings.hideSpeakerTimer) {
     document.title = `${Timer.formatMs(Timer.remainingMs(speakerTimer))} 발표 ${currentSpeakerIdx() + 1}번째 · 라운드 타이머`;
     return;
   }
@@ -531,6 +545,13 @@ function tickSpeaking() {
   const { round, speakerTimer } = state.session;
   const idx = currentSpeakerIdx();
   const clock = el('speakingClock');
+
+  if (state.settings.hideSpeakerTimer) {
+    el('speakerStart').hidden = true;
+    el('speakerPause').hidden = true;
+    el('speakingStopAlarm').hidden = !Alarm.isAlarming();
+    return;
+  }
 
   if (!speakerTimer) {
     const { perPersonMin } = State.effectiveTimes(state);

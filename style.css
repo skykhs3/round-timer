@@ -203,6 +203,9 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent);
 .adjust input { width: 10rem; }
 .adjust.invalid input { outline: 2px solid var(--danger); border-color: transparent; }
 
+.timer-toggle { margin: 14px 0 0; }
+.timer-hidden .speaker-name { font-size: 2.6rem; margin-top: 12px; }
+
 .speaker-name { font-size: 2rem; font-weight: 700; margin: 0; line-height: 1.2; }
 .speaker-paper { margin: 4px 0 16px; color: var(--muted); }
 

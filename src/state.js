@@ -7,7 +7,11 @@ export const DEFAULT_SETTINGS = Object.freeze({
   readMin: 20,
   perPersonMin: 2,
   excludeOwn: true,
+  orderByPaper: true,
+  hideSpeakerTimer: false,
 });
+
+export const PHASES = ['setup', 'reading', 'assigned', 'speaking', 'roundDone', 'finished'];
 
 let seq = 0;
 
@@ -47,8 +51,10 @@ export function load() {
       : base.participants;
     const session = { ...emptySession(), ...(parsed.session || {}) };
     if (!Array.isArray(session.orders)) session.orders = [];
-    const needsOrder = session.phase === 'ordered' || session.phase === 'speaking';
-    if (needsOrder && !Array.isArray(session.orders[session.round - 1])) Object.assign(session, emptySession());
+    const r = session.round - 1;
+    const hasDraw = Array.isArray(session.assignments[r]) && Array.isArray(session.orders[r]);
+    const needsDraw = session.phase === 'assigned' || session.phase === 'speaking';
+    if (!PHASES.includes(session.phase) || (needsDraw && !hasDraw)) Object.assign(session, emptySession());
     return {
       participants,
       settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
